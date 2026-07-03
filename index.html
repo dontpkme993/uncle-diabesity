@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>糖胖症叔叔的煩惱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-top: #e7f1fb;
+    --bg-bottom: #f3f6f9;
+    --card: #ffffff;
+    --text: #1c2b3a;
+    --muted: #7b8a99;
+    --accent: #1d9bf0;
+    --accent-deep: #0b72c4;
+    --field: #eef3f8;
+    --line: #e3eaf2;
+    --r-lg: 16px;
+    --r-sm: 10px;
+    --shadow-sm: 0 1px 2px rgba(16, 42, 67, .08);
+    --shadow-lg: 0 1px 2px rgba(16, 42, 67, .06), 0 12px 32px rgba(16, 42, 67, .14);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-top: #0e1a26;
+      --bg-bottom: #101d2b;
+      --card: #182a3c;
+      --text: #e8eef4;
+      --muted: #8fa1b3;
+      --accent: #3aa8f5;
+      --accent-deep: #1d84d8;
+      --field: #21374d;
+      --line: #27405a;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+      --shadow-lg: 0 1px 2px rgba(0, 0, 0, .25), 0 12px 32px rgba(0, 0, 0, .45);
+    }
+  }
+
+  body {
+    font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif;
+    background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 320px);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 960px;
+  }
+
+  /* ---- Hero 標題區 ---- */
+  header {
+    text-align: center;
+    padding: 28px 0 32px;
+  }
+
+  h1 {
+    font-size: clamp(1.7rem, 5vw, 2.6rem);
+    font-weight: 900;
+    letter-spacing: .04em;
+    background: linear-gradient(120deg, var(--accent-deep) 10%, var(--accent) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .subtitle {
+    margin-top: 10px;
+    font-family: "Inter", sans-serif;
+    font-size: clamp(.7rem, 2vw, .82rem);
+    font-weight: 500;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---- 版面 ---- */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 640px) {
+    .layout { grid-template-columns: 1fr; }
+    .panel.preview { order: -1; }  /* 手機版預覽在最上方 */
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .panel h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .95rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 700;
+    flex: none;
+  }
+
+  .step.mark { background: var(--accent-deep); }
+
+  .section-gap { margin-top: 22px; }
+
+  /* ---- 底圖選擇 grid ---- */
+  .bg-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .bg-grid button {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border: 2px solid transparent;
+    border-radius: var(--r-sm);
+    padding: 0;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--field);
+    transition: border-color .15s, transform .12s, box-shadow .15s;
+  }
+
+  .bg-grid button img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .bg-grid button.selected { border-color: var(--accent); }
+
+  .bg-grid button.selected::after {
+    content: "✓";
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .bg-grid button:not(.unavailable):hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .bg-grid button.unavailable {
+    cursor: not-allowed;
+    background: transparent;
+    border: 2px dashed var(--line);
+    color: var(--muted);
+    font-size: .72rem;
+  }
+  .bg-grid button.unavailable::after { content: none; }
+  .bg-grid button.unavailable::before { content: "無圖"; }
+
+  /* ---- 文字輸入 ---- */
+  .text-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 1rem;
+    font-family: inherit;
+    color: var(--text);
+    border: 1.5px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--field);
+    outline: none;
+    transition: border-color .15s, background .15s;
+  }
+  .text-input:focus {
+    border-color: var(--accent);
+    background: var(--card);
+  }
+  .text-input::placeholder { color: var(--muted); }
+
+  .hint {
+    font-size: .78rem;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* ---- emoji 裝飾列 ---- */
+  .emoji-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .emoji-row button {
+    flex: 1 0 auto;
+    padding: 9px 8px;
+    background: var(--field);
+    border: none;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    line-height: 0;
+    transition: transform .12s, background .15s, box-shadow .15s;
+  }
+  .emoji-row button img {
+    width: 26px;
+    height: 26px;
+    pointer-events: none;
+  }
+  .emoji-row button:hover {
+    transform: translateY(-2px) scale(1.08);
+    box-shadow: var(--shadow-sm);
+  }
+  .emoji-row button:active { transform: scale(.94); }
+
+  /* 操作提示 chips */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .chip {
+    font-size: .72rem;
+    color: var(--muted);
+    background: var(--field);
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* ---- 預覽 canvas ---- */
+  .canvas-wrap { position: relative; }
+
+  #canvas {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--r-sm);
+    display: block;
+    background: var(--field);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-lg);
+    touch-action: none; /* 讓拖曳/雙指手勢不觸發頁面捲動 */
+  }
+
+  .ratio-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-family: "Inter", sans-serif;
+    font-size: .68rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    color: #fff;
+    background: rgba(15, 30, 45, .55);
+    padding: 3px 8px;
+    border-radius: 999px;
+    pointer-events: none;
+    backdrop-filter: blur(4px);
+  }
+
+  /* ---- 動作按鈕 ---- */
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 0;
+    font-size: .95rem;
+    font-weight: 700;
+    font-family: inherit;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: transform .12s, box-shadow .15s, filter .15s, background .15s;
+  }
+  .btn svg { flex: none; }
+  .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+  .btn:active { transform: scale(.97); box-shadow: none; }
+
+  .btn.primary {
+    border: none;
+    color: #fff;
+    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  }
+  .btn.primary:hover { filter: brightness(1.06); }
+
+  .btn.secondary {
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    background: transparent;
+  }
+  .btn.secondary:hover { background: rgba(29, 155, 240, .08); }
+
+  button:focus-visible, .text-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ---- toast 提示 ---- */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 32px;
+    transform: translateX(-50%) translateY(16px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(24, 34, 44, .92);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: .88rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    white-space: nowrap;
+    box-shadow: var(--shadow-lg);
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #toast .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: .7rem;
+    font-weight: 700;
+    flex: none;
+  }
+  #toast.ok .icon { background: #2ecc71; }
+  #toast.err .icon { background: #e74c3c; }
+
+  footer {
+    text-align: center;
+    font-size: .72rem;
+    color: var(--muted);
+    padding: 28px 0 8px;
+    font-family: "Inter", sans-serif;
+    letter-spacing: .08em;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>糖胖症叔叔的煩惱</h1>
+    <p class="subtitle">The Sorrows of Uncle Diabesity</p>
+  </header>
+
+  <div class="layout">
+    <div class="panel">
+      <h2><span class="step">1</span>選擇底圖</h2>
+      <div class="bg-grid" id="bgGrid"></div>
+
+      <h2 class="section-gap"><span class="step">2</span>輸入文字(8 字以內)</h2>
+      <input type="text" id="textInput" class="text-input" maxlength="8" placeholder="輸入貼圖文字…">
+      <div class="hint">文字會以白色顯示在貼圖左上角,字數越少字級越大</div>
+
+      <h2 class="section-gap"><span class="step">3</span>加入 Emoji 裝飾(最多 4 個)</h2>
+      <div class="emoji-row" id="emojiRow"></div>
+      <div class="chips">
+        <span class="chip">🖐 拖曳移動</span>
+        <span class="chip">🤏 雙指縮放/旋轉</span>
+        <span class="chip">🖱 滾輪縮放・Shift+滾輪旋轉</span>
+        <span class="chip">👆👆 雙擊移除</span>
+      </div>
+    </div>
+
+    <div class="panel preview">
+      <h2><span class="step mark">✦</span>預覽與輸出</h2>
+      <div class="canvas-wrap">
+        <canvas id="canvas" width="640" height="640"></canvas>
+        <span class="ratio-badge">1:1 · 640px</span>
+      </div>
+      <div class="actions">
+        <button id="copyBtn" class="btn primary">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          複製圖片
+        </button>
+        <button id="shareBtn" class="btn secondary">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+          分享
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer>MOUJARO STICKERS</footer>
+</div>
+
+<div id="toast"><span class="icon"></span><span class="msg"></span></div>
+
+<script>
+(function () {
+  const CANVAS_SIZE = 640;
+  const BG_COUNT = 8;
+  const TEXT_FONT = '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif';
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const bgGrid = document.getElementById('bgGrid');
+  const textInput = document.getElementById('textInput');
+  const copyBtn = document.getElementById('copyBtn');
+  const shareBtn = document.getElementById('shareBtn');
+  const toast = document.getElementById('toast');
+
+  let currentImage = null;
+  let toastTimer = null;
+
+  function showToast(msg, type = 'ok') {
+    toast.querySelector('.icon').textContent = type === 'ok' ? '✓' : '✕';
+    toast.querySelector('.msg').textContent = msg;
+    toast.className = 'show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  // ---- 建立底圖選擇 grid ----
+  for (let i = 1; i <= BG_COUNT; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.index = i;
+
+    const img = new Image();
+    img.src = 'image/bg' + i + '.jpg';
+    img.alt = '底圖 ' + i;
+
+    img.onload = () => {
+      btn.appendChild(img);
+      // 預設選取第一張載入成功的圖
+      if (!currentImage) selectBackground(btn, img);
+    };
+    img.onerror = () => {
+      btn.classList.add('unavailable');
+      btn.disabled = true;
+    };
+
+    btn.addEventListener('click', () => selectBackground(btn, img));
+    bgGrid.appendChild(btn);
+  }
+
+  function selectBackground(btn, img) {
+    bgGrid.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    currentImage = img;
+    render();
+  }
+
+  // ---- Emoji 裝飾(Twemoji SVG,本地載入不污染 canvas)----
+  const EMOJIS = [
+    { char: '💉', code: '1f489' },
+    { char: '🍩', code: '1f369' },
+    { char: '🍔', code: '1f354' },
+    { char: '🧋', code: '1f9cb' },
+    { char: '😭', code: '1f62d' },
+    { char: '💦', code: '1f4a6' },
+    { char: '🔥', code: '1f525' },
+    { char: '⚖️', code: '2696' }
+  ];
+  const MAX_STICKERS = 4;
+  const emojiRow = document.getElementById('emojiRow');
+  const stickers = [];   // { img, x, y, size, rotation, pop }
+  let selected = null;
+
+  EMOJIS.forEach(e => {
+    e.img = new Image();
+    e.img.src = 'image/twemoji/' + e.code + '.svg';
+
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.title = e.char;
+    const icon = document.createElement('img');
+    icon.src = e.img.src;
+    icon.alt = e.char;
+    b.appendChild(icon);
+    b.addEventListener('click', () => addSticker(e));
+    emojiRow.appendChild(b);
+  });
+
+  function addSticker(e) {
+    if (stickers.length >= MAX_STICKERS) {
+      showToast('最多只能放 ' + MAX_STICKERS + ' 個 emoji', 'err');
+      return;
+    }
+    if (!e.img.complete || !e.img.naturalWidth) {
+      showToast('圖示載入中,請再試一次', 'err');
+      return;
+    }
+    // 依序錯開初始位置,避免完全疊在一起
+    const offset = stickers.length * 50 - 75;
+    const s = {
+      img: e.img,
+      x: CANVAS_SIZE / 2 + offset,
+      y: CANVAS_SIZE / 2 + offset,
+      size: CANVAS_SIZE * 0.22,
+      rotation: 0,
+      pop: 0
+    };
+    stickers.push(s);
+    selected = s;
+    popIn(s);
+  }
+
+  // 加入時的彈跳動畫(easeOutBack)
+  function popIn(s) {
+    const start = performance.now();
+    const dur = 260;
+    function frame(t) {
+      const k = Math.min((t - start) / dur, 1);
+      const c1 = 1.70158, c3 = c1 + 1;
+      s.pop = 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
+      render();
+      if (k < 1) requestAnimationFrame(frame);
+      else { s.pop = 1; render(); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function removeSticker(s) {
+    stickers.splice(stickers.indexOf(s), 1);
+    if (selected === s) selected = null;
+    render();
+  }
+
+  // ---- 繪製 canvas ----
+  function render(forExport = false) {
+    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+    if (currentImage) {
+      // 以 cover 方式繪製底圖,維持比例填滿 1:1 畫布
+      const iw = currentImage.naturalWidth;
+      const ih = currentImage.naturalHeight;
+      const scale = Math.max(CANVAS_SIZE / iw, CANVAS_SIZE / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      ctx.drawImage(currentImage, (CANVAS_SIZE - dw) / 2, (CANVAS_SIZE - dh) / 2, dw, dh);
+    }
+
+    const text = textInput.value.trim();
+    if (text) {
+      const padding = Math.round(CANVAS_SIZE * 0.05);
+      const maxWidth = CANVAS_SIZE - padding * 2;
+      const baseSize = CANVAS_SIZE * 0.11;      // 8 字版基準字級
+      const maxSize = CANVAS_SIZE * 0.3;        // 字數少時的放大上限
+
+      // 以基準字級量測實際寬度,再等比縮放至填滿可用寬度(不超過上限)
+      ctx.font = '900 ' + baseSize + 'px ' + TEXT_FONT;
+      const measured = ctx.measureText(text).width;
+      const fontSize = Math.round(Math.min(baseSize * maxWidth / measured, maxSize));
+
+      ctx.font = '900 ' + fontSize + 'px ' + TEXT_FONT;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      // 陰影讓白字在淺色底圖上仍可辨識
+      ctx.shadowColor = 'rgba(0,0,0,.45)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, padding, padding);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    }
+
+    for (const s of stickers) {
+      const size = s.size * (s.pop || 1);
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rotation);
+      ctx.drawImage(s.img, -size / 2, -size / 2, size, size);
+      ctx.restore();
+    }
+
+    // 選取框只在預覽時顯示,輸出圖片不包含
+    if (!forExport && selected) {
+      ctx.save();
+      ctx.translate(selected.x, selected.y);
+      ctx.rotate(selected.rotation);
+      ctx.strokeStyle = 'rgba(29,155,240,.9)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 6]);
+      const half = selected.size / 2 + 6;
+      ctx.strokeRect(-half, -half, half * 2, half * 2);
+      ctx.restore();
+    }
+  }
+
+  textInput.addEventListener('input', () => render());
+  // webfont 載入完成後重繪,套用 Noto Sans TC
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => render());
+  }
+
+  // ---- canvas 上的拖曳 / 手勢操作 ----
+  const pointers = new Map();
+  let dragTarget = null;
+  let dragOffset = null;
+  let pinchStart = null;
+  let lastTap = { time: 0, target: null };
+
+  function canvasPos(ev) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (ev.clientX - rect.left) * (CANVAS_SIZE / rect.width),
+      y: (ev.clientY - rect.top) * (CANVAS_SIZE / rect.height)
+    };
+  }
+
+  // 把座標轉進 emoji 的旋轉座標系再做方框判定,由上層(後加入)往下找
+  function hitTest(p) {
+    for (let i = stickers.length - 1; i >= 0; i--) {
+      const s = stickers[i];
+      const dx = p.x - s.x, dy = p.y - s.y;
+      const cos = Math.cos(-s.rotation), sin = Math.sin(-s.rotation);
+      const lx = dx * cos - dy * sin, ly = dx * sin + dy * cos;
+      const half = s.size / 2;
+      if (Math.abs(lx) <= half && Math.abs(ly) <= half) return s;
+    }
+    return null;
+  }
+
+  canvas.addEventListener('pointerdown', ev => {
+    ev.preventDefault();
+    canvas.setPointerCapture(ev.pointerId);
+    const p = canvasPos(ev);
+    pointers.set(ev.pointerId, p);
+
+    if (pointers.size === 1) {
+      const s = hitTest(p);
+
+      // 雙擊 / 雙點同一個 emoji → 移除
+      const now = performance.now();
+      if (s && s === lastTap.target && now - lastTap.time < 350) {
+        lastTap = { time: 0, target: null };
+        removeSticker(s);
+        return;
+      }
+      lastTap = { time: now, target: s };
+
+      selected = s;
+      if (s) {
+        dragTarget = s;
+        dragOffset = { x: p.x - s.x, y: p.y - s.y };
+      }
+      render();
+    } else if (pointers.size === 2 && selected) {
+      // 第二指按下 → 開始縮放/旋轉
+      const [a, b] = [...pointers.values()];
+      pinchStart = {
+        dist: Math.hypot(b.x - a.x, b.y - a.y),
+        angle: Math.atan2(b.y - a.y, b.x - a.x),
+        size: selected.size,
+        rotation: selected.rotation
+      };
+      dragTarget = null;
+    }
+  });
+
+  canvas.addEventListener('pointermove', ev => {
+    if (!pointers.has(ev.pointerId)) return;
+    const p = canvasPos(ev);
+    pointers.set(ev.pointerId, p);
+
+    if (pointers.size === 2 && pinchStart && selected) {
+      const [a, b] = [...pointers.values()];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      selected.size = Math.min(Math.max(pinchStart.size * dist / pinchStart.dist, 40), CANVAS_SIZE);
+      selected.rotation = pinchStart.rotation + (angle - pinchStart.angle);
+      render();
+    } else if (dragTarget && pointers.size === 1) {
+      dragTarget.x = p.x - dragOffset.x;
+      dragTarget.y = p.y - dragOffset.y;
+      render();
+    }
+  });
+
+  function endPointer(ev) {
+    pointers.delete(ev.pointerId);
+    if (pointers.size < 2) pinchStart = null;
+    if (pointers.size === 0) dragTarget = null;
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+
+  // 桌機:滾輪縮放、Shift+滾輪旋轉
+  canvas.addEventListener('wheel', ev => {
+    if (!selected) return;
+    ev.preventDefault();
+    if (ev.shiftKey) {
+      selected.rotation += (ev.deltaY > 0 ? 1 : -1) * Math.PI / 24;
+    } else {
+      const factor = ev.deltaY > 0 ? 0.92 : 1.08;
+      selected.size = Math.min(Math.max(selected.size * factor, 40), CANVAS_SIZE);
+    }
+    render();
+  }, { passive: false });
+
+  // ---- 產出 PNG blob ----
+  function toBlob() {
+    return new Promise((resolve, reject) => {
+      render(true); // 匯出模式:不畫選取框
+      canvas.toBlob(b => {
+        render(false);
+        b ? resolve(b) : reject(new Error('無法產生圖片'));
+      }, 'image/png');
+    });
+  }
+
+  // ---- 複製到剪貼簿 ----
+  copyBtn.addEventListener('click', async () => {
+    try {
+      if (!navigator.clipboard || !window.ClipboardItem) {
+        throw new Error('瀏覽器不支援剪貼簿圖片');
+      }
+      // Safari 需要在使用者手勢中同步建立 ClipboardItem,故傳入 promise
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': toBlob() })
+      ]);
+      showToast('已複製圖片到剪貼簿');
+    } catch (err) {
+      console.error(err);
+      // 退回下載方式
+      downloadImage();
+      showToast('無法複製,已改為下載圖片', 'err');
+    }
+  });
+
+  // ---- 分享 ----
+  shareBtn.addEventListener('click', async () => {
+    try {
+      const blob = await toBlob();
+      const file = new File([blob], 'sticker.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: '糖胖症叔叔的煩惱'
+        });
+      } else {
+        downloadImage();
+        showToast('此瀏覽器不支援分享,已改為下載圖片', 'err');
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error(err);
+        showToast('分享失敗', 'err');
+      }
+    }
+  });
+
+  // ---- 下載 fallback ----
+  function downloadImage() {
+    render(true); // 匯出模式:不畫選取框
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'sticker.png';
+    a.click();
+    render(false);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
