@@ -599,14 +599,14 @@
       <input type="file" id="bgFileInput" accept="image/*" hidden>
 
       <h2 class="section-gap"><span class="step">2</span>輸入叔叔的吶喊<span class="en">Methods</span></h2>
-      <input type="text" id="textInput" class="text-input" maxlength="8" placeholder="輸入貼圖文字…(8 字以內)">
-      <div class="hint" id="textHint">(0/8)</div>
+      <input type="text" id="textInput" class="text-input" maxlength="8" placeholder="在這裡輸入文字…">
+      <div class="hint" id="textHint"></div>
 
       <div id="emojiSection">
         <h2 class="section-gap"><span class="step">3</span>加入 Emoji 裝飾<span class="en">Intervention</span></h2>
         <div class="emoji-row" id="emojiRow"></div>
         <div class="emoji-panel" id="emojiPanel" hidden></div>
-        <div class="hint" id="emojiHint">(0/4)</div>
+        <div class="hint" id="emojiHint"></div>
       </div>
     </div>
 
@@ -995,7 +995,7 @@
   renderEmojiRow();
 
   function updateEmojiHint() {
-    emojiHint.textContent = '(' + stickers.length + '/' + MAX_STICKERS + ')';
+    emojiHint.textContent = 'Emoji裝飾數量 ' + stickers.length + '/' + MAX_STICKERS;
   }
 
   function addSticker(e) {
@@ -1156,7 +1156,7 @@
   }
 
   function updateTextHint() {
-    textHint.textContent = '(' + textInput.value.length + '/8)';
+    textHint.textContent = '貼圖文字 ' + textInput.value.length + '/8';
   }
   textInput.addEventListener('input', () => { updateTextHint(); render(); });
   // webfont 載入完成後重繪,套用 Noto Sans TC
