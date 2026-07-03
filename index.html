@@ -599,7 +599,7 @@
       <input type="file" id="bgFileInput" accept="image/*" hidden>
 
       <h2 class="section-gap"><span class="step">2</span>輸入叔叔的吶喊<span class="en">Methods</span></h2>
-      <input type="text" id="textInput" class="text-input" maxlength="8" placeholder="在這裡輸入文字…">
+      <input type="text" id="textInput" class="text-input" maxlength="10" placeholder="在這裡輸入文字…">
       <div class="hint" id="textHint"></div>
 
       <div id="emojiSection">
@@ -615,7 +615,7 @@
       <div class="canvas-wrap">
         <canvas id="canvas" width="640" height="640"></canvas>
       </div>
-      <p class="fig-caption"><strong>Fig.1</strong> 貼圖成品即時預覽(640 × 640)</p>
+      <p class="fig-caption">貼圖成品即時預覽(640 × 640)</p>
       <div class="actions">
         <button id="copyBtn" class="btn primary">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -630,7 +630,7 @@
       <h2 class="section-gap"><span class="step mark">★</span>我的最愛<span class="en">Archive</span></h2>
       <button id="saveFavBtn" class="btn secondary block">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        儲存這張貼圖
+        儲存這位叔叔
       </button>
       <div class="fav-grid" id="favGrid"></div>
       <p class="hint" id="favHint">尚無收藏。按上方按鈕，將目前的底圖、文字與 emoji 配置存到這台裝置，之後點縮圖即可一鍵載入。</p>
@@ -898,6 +898,7 @@
 
   const KEY_RECENT = 'moujaro.recentEmojis';
   const MAX_RECENT = 8;
+  const MAX_RECENT_MOBILE = 6;
   const DEFAULT_RECENT = ['1f489', '1f369', '1f354', '1f9cb', '1f62d', '1f4a6', '1f525', '2696'];
   let recentCodes = loadJSON(KEY_RECENT, null);
   if (!Array.isArray(recentCodes)) recentCodes = [];
@@ -912,9 +913,14 @@
   const stickers = [];   // { img, x, y, size, rotation, pop }
   let selected = null;
 
+  function isMobileView() {
+    return window.matchMedia('(max-width: 640px)').matches;
+  }
+
   // 手機版點選 emoji 後,把裝飾區捲到頂端,露出下方預覽以便即時觀看結果
   function scrollEmojiSectionToTop() {
-    if (!window.matchMedia('(max-width: 640px)').matches) return;
+    if (!isMobileView()) return;
+    if (!emojiPanel.hidden) setEmojiPanelHidden(true);
     emojiSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -959,10 +965,22 @@
     return b;
   }
 
+  // 收合/展開分類面板,並同步「更多」按鈕的文字與狀態
+  function setEmojiPanelHidden(hidden) {
+    emojiPanel.hidden = hidden;
+    const more = emojiRow.querySelector('.emoji-more');
+    if (more) {
+      more.textContent = hidden ? '更多 ▾' : '收合 ▴';
+      more.setAttribute('aria-expanded', String(!hidden));
+    }
+  }
+
   // 最近使用列:點過的 emoji 移到最前,存在這台裝置;末端附展開面板切換鈕
+  // 手機模式只顯示 6 格,第 7 格放「更多」鈕,避免擠爆一行
   function renderEmojiRow() {
     emojiRow.innerHTML = '';
-    recentCodes.forEach(code => {
+    const displayCount = isMobileView() ? MAX_RECENT_MOBILE : MAX_RECENT;
+    recentCodes.slice(0, displayCount).forEach(code => {
       const e = EMOJIS.find(x => x.code === code);
       if (e) emojiRow.appendChild(makeEmojiBtn(e));
     });
@@ -971,11 +989,7 @@
     more.className = 'emoji-more';
     more.textContent = emojiPanel.hidden ? '更多 ▾' : '收合 ▴';
     more.setAttribute('aria-expanded', String(!emojiPanel.hidden));
-    more.addEventListener('click', () => {
-      emojiPanel.hidden = !emojiPanel.hidden;
-      more.textContent = emojiPanel.hidden ? '更多 ▾' : '收合 ▴';
-      more.setAttribute('aria-expanded', String(!emojiPanel.hidden));
-    });
+    more.addEventListener('click', () => setEmojiPanelHidden(!emojiPanel.hidden));
     emojiRow.appendChild(more);
   }
 
@@ -1156,7 +1170,7 @@
   }
 
   function updateTextHint() {
-    textHint.textContent = '貼圖文字 ' + textInput.value.length + '/8';
+    textHint.textContent = '貼圖文字 ' + textInput.value.length + '/10';
   }
   textInput.addEventListener('input', () => { updateTextHint(); render(); });
   // webfont 載入完成後重繪,套用 Noto Sans TC
