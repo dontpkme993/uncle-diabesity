@@ -428,7 +428,7 @@
     background: var(--field);
     border: 1px solid var(--line);
     box-shadow: var(--shadow-sm);
-    touch-action: none; /* 讓拖曳/雙指手勢不觸發頁面捲動 */
+    touch-action: none; /* 拖曳/手把手勢不觸發原生捲動;空白處捲動改由 JS 手動轉發 */
   }
 
   .fig-caption {
@@ -1029,6 +1029,10 @@
     return Math.min(Math.max(v, BASE_SIZE * MIN_SCALE), BASE_SIZE * MAX_SCALE);
   }
 
+  function clamp(v, min, max) {
+    return Math.min(Math.max(v, min), max);
+  }
+
   // ---- 繪製 canvas ----
   function render(forExport = false) {
     ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -1139,6 +1143,7 @@
   let dragOffset = null;
   let handleDrag = null;   // { type:'rotate'|'scale', ... }
   let lastTap = { time: 0, target: null };
+  let manualScroll = null; // { pointerId, lastY };空白處觸控時手動把位移轉發給頁面捲動
 
   function canvasPos(ev) {
     const rect = canvas.getBoundingClientRect();
@@ -1171,14 +1176,29 @@
   }
 
   canvas.addEventListener('pointerdown', ev => {
-    ev.preventDefault();
-    canvas.setPointerCapture(ev.pointerId);
     const p = canvasPos(ev);
-    pointers.set(ev.pointerId, p);
-    if (pointers.size !== 1) return; // 只用第一指操作
 
     // 手把優先於一般點選,避免手指蓋住 emoji 時誤判
     const h = hitHandle(p);
+    const s = h ? null : hitTest(p);
+
+    // 空白處:不鎖定手勢,觸控時改由 JS 手動把垂直位移轉發成頁面捲動
+    // (canvas 為 touch-action:none,瀏覽器不會自動捲動,故用 pointermove 手動模擬)
+    if (!h && !s) {
+      selected = null;
+      render();
+      if (ev.pointerType === 'touch') {
+        canvas.setPointerCapture(ev.pointerId);
+        manualScroll = { pointerId: ev.pointerId, lastY: ev.clientY };
+      }
+      return;
+    }
+
+    ev.preventDefault();
+    canvas.setPointerCapture(ev.pointerId);
+    pointers.set(ev.pointerId, p);
+    if (pointers.size !== 1) return; // 只用第一指操作
+
     if (h === 'rotate') {
       handleDrag = {
         type: 'rotate',
@@ -1195,11 +1215,9 @@
       return;
     }
 
-    const s = hitTest(p);
-
     // 雙擊 / 雙點同一個 emoji → 移除
     const now = performance.now();
-    if (s && s === lastTap.target && now - lastTap.time < 350) {
+    if (s === lastTap.target && now - lastTap.time < 350) {
       lastTap = { time: 0, target: null };
       removeSticker(s);
       return;
@@ -1207,14 +1225,17 @@
     lastTap = { time: now, target: s };
 
     selected = s;
-    if (s) {
-      dragTarget = s;
-      dragOffset = { x: p.x - s.x, y: p.y - s.y };
-    }
+    dragTarget = s;
+    dragOffset = { x: p.x - s.x, y: p.y - s.y };
     render();
   });
 
   canvas.addEventListener('pointermove', ev => {
+    if (manualScroll && manualScroll.pointerId === ev.pointerId) {
+      window.scrollBy(0, manualScroll.lastY - ev.clientY);
+      manualScroll.lastY = ev.clientY;
+      return;
+    }
     if (!pointers.has(ev.pointerId)) return;
     const p = canvasPos(ev);
     pointers.set(ev.pointerId, p);
@@ -1228,13 +1249,15 @@
       }
       render();
     } else if (dragTarget) {
-      dragTarget.x = p.x - dragOffset.x;
-      dragTarget.y = p.y - dragOffset.y;
+      // 中心點限制在畫布內,emoji 本體允許部分超出畫面
+      dragTarget.x = clamp(p.x - dragOffset.x, 0, CANVAS_SIZE);
+      dragTarget.y = clamp(p.y - dragOffset.y, 0, CANVAS_SIZE);
       render();
     }
   });
 
   function endPointer(ev) {
+    if (manualScroll && manualScroll.pointerId === ev.pointerId) manualScroll = null;
     pointers.delete(ev.pointerId);
     if (pointers.size === 0) {
       dragTarget = null;
