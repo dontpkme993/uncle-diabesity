@@ -131,7 +131,6 @@
 
   @media (max-width: 640px) {
     .layout { grid-template-columns: 1fr; }
-    .panel.preview { order: -1; }  /* 手機版預覽在最上方 */
   }
 
   .panel {
@@ -603,12 +602,14 @@
       <input type="text" id="textInput" class="text-input" maxlength="8" placeholder="輸入貼圖文字…">
       <div class="hint">文字會以白色顯示在貼圖左上角,字數越少字級越大</div>
 
-      <h2 class="section-gap"><span class="step">3</span>加入 Emoji 裝飾(最多 4 個)<span class="en">Intervention</span></h2>
-      <div class="emoji-row" id="emojiRow"></div>
-      <div class="emoji-panel" id="emojiPanel" hidden></div>
-      <div class="chips">
-        <span class="chip">🖐 拖曳移動</span>
-        <span class="chip">👆👆 雙擊移除</span>
+      <div id="emojiSection">
+        <h2 class="section-gap"><span class="step">3</span>加入 Emoji 裝飾(最多 4 個)<span class="en">Intervention</span></h2>
+        <div class="emoji-row" id="emojiRow"></div>
+        <div class="emoji-panel" id="emojiPanel" hidden></div>
+        <div class="chips">
+          <span class="chip">🖐 拖曳移動</span>
+          <span class="chip">👆👆 雙擊移除</span>
+        </div>
       </div>
     </div>
 
@@ -893,8 +894,15 @@
   const MAX_STICKERS = 4;
   const emojiRow = document.getElementById('emojiRow');
   const emojiPanel = document.getElementById('emojiPanel');
+  const emojiSection = document.getElementById('emojiSection');
   const stickers = [];   // { img, x, y, size, rotation, pop }
   let selected = null;
+
+  // 手機版點選 emoji 後,把裝飾區捲到頂端,露出下方預覽以便即時觀看結果
+  function scrollEmojiSectionToTop() {
+    if (!window.matchMedia('(max-width: 640px)').matches) return;
+    emojiSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   function emojiSrc(code) { return 'image/twemoji/' + code + '.svg'; }
 
@@ -915,6 +923,7 @@
       img.addEventListener('error', () => showToast('圖示載入失敗', 'err'), { once: true });
     }
     pushRecent(e.code);
+    scrollEmojiSectionToTop();
   }
 
   function pushRecent(code) {
