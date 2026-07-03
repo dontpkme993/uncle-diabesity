@@ -608,7 +608,6 @@
         <div class="emoji-panel" id="emojiPanel" hidden></div>
         <div class="chips">
           <span class="chip">🖐 拖曳移動</span>
-          <span class="chip">👆👆 雙擊移除</span>
         </div>
       </div>
     </div>
@@ -1096,34 +1095,38 @@
       ctx.strokeRect(-half, -half, half * 2, half * 2);
       ctx.restore();
 
-      // 旋轉/縮放手把:手機單指即可精細操作
+      // 旋轉/縮放/刪除手把:手機單指即可精細操作
       const hp = handlePositions(selected);
       drawHandle(hp.rotate, '↻', 0);
       drawHandle(hp.scale, '↔︎', -Math.PI / 4); // ↔ 轉 45° 變斜向雙箭頭
+      drawHandle(hp.del, '×', 0, { fill: '#e74c3c', stroke: 'rgba(180,30,30,.95)', text: '#ffffff' });
     }
   }
 
-  // 手把位置:右上角=旋轉,左下角=縮放(跟著選取框旋轉)
+  // 手把位置:右上角=旋轉,左下角=縮放,左上角=刪除(跟著選取框旋轉)
   function handlePositions(s) {
     const half = s.size / 2 + 6;
     const cos = Math.cos(s.rotation), sin = Math.sin(s.rotation);
     const corner = (lx, ly) => ({ x: s.x + lx * cos - ly * sin, y: s.y + lx * sin + ly * cos });
-    return { rotate: corner(half, -half), scale: corner(-half, half) };
+    return { rotate: corner(half, -half), scale: corner(-half, half), del: corner(-half, -half) };
   }
 
-  function drawHandle(p, glyph, tilt) {
+  function drawHandle(p, glyph, tilt, style) {
+    const fill = (style && style.fill) || '#ffffff';
+    const stroke = (style && style.stroke) || 'rgba(31,78,121,.95)';
+    const text = (style && style.text) || '#1f4e79';
     ctx.save();
     ctx.setLineDash([]);
     ctx.translate(p.x, p.y);
     ctx.beginPath();
     ctx.arc(0, 0, HANDLE_R, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = 'rgba(31,78,121,.95)';
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
     ctx.lineWidth = 2.5;
     ctx.fill();
     ctx.stroke();
     ctx.rotate(tilt);
-    ctx.fillStyle = '#1f4e79';
+    ctx.fillStyle = text;
     ctx.font = '700 ' + Math.round(HANDLE_R * 1.2) + 'px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1142,7 +1145,6 @@
   let dragTarget = null;
   let dragOffset = null;
   let handleDrag = null;   // { type:'rotate'|'scale', ... }
-  let lastTap = { time: 0, target: null };
   let manualScroll = null; // { pointerId, lastY };空白處觸控時手動把位移轉發給頁面捲動
 
   function canvasPos(ev) {
@@ -1166,12 +1168,13 @@
     return null;
   }
 
-  // 判斷是否按在旋轉/縮放手把上
+  // 判斷是否按在旋轉/縮放/刪除手把上
   function hitHandle(p) {
     if (!selected) return null;
     const hp = handlePositions(selected);
     if (Math.hypot(p.x - hp.rotate.x, p.y - hp.rotate.y) <= HANDLE_HIT) return 'rotate';
     if (Math.hypot(p.x - hp.scale.x, p.y - hp.scale.y) <= HANDLE_HIT) return 'scale';
+    if (Math.hypot(p.x - hp.del.x, p.y - hp.del.y) <= HANDLE_HIT) return 'del';
     return null;
   }
 
@@ -1199,6 +1202,10 @@
     pointers.set(ev.pointerId, p);
     if (pointers.size !== 1) return; // 只用第一指操作
 
+    if (h === 'del') {
+      removeSticker(selected);
+      return;
+    }
     if (h === 'rotate') {
       handleDrag = {
         type: 'rotate',
@@ -1214,15 +1221,6 @@
       };
       return;
     }
-
-    // 雙擊 / 雙點同一個 emoji → 移除
-    const now = performance.now();
-    if (s === lastTap.target && now - lastTap.time < 350) {
-      lastTap = { time: 0, target: null };
-      removeSticker(s);
-      return;
-    }
-    lastTap = { time: now, target: s };
 
     selected = s;
     dragTarget = s;
