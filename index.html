@@ -185,6 +185,33 @@
 
   .section-gap { margin-top: 22px; }
 
+  /* ---- 底圖來源切換 ---- */
+  .bg-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 7px 0;
+    font-size: .78rem;
+    font-weight: 700;
+    font-family: inherit;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+
+  .tab.active {
+    color: #fff;
+    background: var(--accent-deep);
+    border-color: var(--accent-deep);
+  }
+
   /* ---- 底圖選擇 grid ---- */
   .bg-grid {
     display: grid;
@@ -245,6 +272,34 @@
   }
   .bg-grid button.unavailable::after { content: none; }
   .bg-grid button.unavailable::before { content: "無圖"; }
+
+  .bg-grid button.add-slot {
+    background: transparent;
+    border: 2px dashed var(--line);
+    color: var(--muted);
+    font-size: 1.3rem;
+  }
+  .bg-grid button.add-slot::before { content: "+"; }
+  .bg-grid button.add-slot::after { content: none; }
+
+  /* 縮圖上的刪除鈕(自訂底圖/收藏共用) */
+  .thumb-del {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(34, 38, 44, .72);
+    color: #fff;
+    font-size: .78rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .thumb-del:hover { background: #b03a2e; }
 
   /* ---- 文字輸入 ---- */
   .text-input {
@@ -383,6 +438,41 @@
   }
   .btn.secondary:hover { background: rgba(31, 78, 121, .07); }
 
+  .btn.block { width: 100%; flex: none; }
+
+  /* ---- 我的最愛 grid ---- */
+  .fav-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .fav-grid button {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border: 2px solid transparent;
+    border-radius: var(--r-sm);
+    padding: 0;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--field);
+    transition: border-color .15s, transform .12s, box-shadow .15s;
+  }
+
+  .fav-grid button img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .fav-grid button:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
   button:focus-visible, .text-input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -455,7 +545,12 @@
   <div class="layout">
     <div class="panel">
       <h2><span class="step">1</span>選擇底圖<span class="en">Materials</span></h2>
+      <div class="bg-tabs">
+        <button type="button" id="tabBuiltin" class="tab active">內建底圖</button>
+        <button type="button" id="tabCustom" class="tab">自訂圖片</button>
+      </div>
       <div class="bg-grid" id="bgGrid"></div>
+      <input type="file" id="bgFileInput" accept="image/*" hidden>
 
       <h2 class="section-gap"><span class="step">2</span>輸入文字(8 字以內)<span class="en">Methods</span></h2>
       <input type="text" id="textInput" class="text-input" maxlength="8" placeholder="輸入貼圖文字…">
@@ -465,7 +560,8 @@
       <div class="emoji-row" id="emojiRow"></div>
       <div class="chips">
         <span class="chip">🖐 拖曳移動</span>
-        <span class="chip">🤏 雙指縮放/旋轉</span>
+        <span class="chip">↻ 拖右上手把旋轉</span>
+        <span class="chip">↔ 拖左下手把縮放</span>
         <span class="chip">🖱 滾輪縮放・Shift+滾輪旋轉</span>
         <span class="chip">👆👆 雙擊移除</span>
       </div>
@@ -487,6 +583,14 @@
           分享
         </button>
       </div>
+
+      <h2 class="section-gap"><span class="step mark">★</span>我的最愛<span class="en">Archive</span></h2>
+      <button id="saveFavBtn" class="btn secondary block">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        儲存目前配置
+      </button>
+      <div class="fav-grid" id="favGrid"></div>
+      <p class="hint" id="favHint">尚無收藏。按上方按鈕，將目前的底圖、文字與 emoji 配置存到這台裝置，之後點縮圖即可一鍵載入。</p>
     </div>
   </div>
 
@@ -503,6 +607,13 @@
   const CANVAS_SIZE = 640;
   const BG_COUNT = 8;
   const TEXT_FONT = '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif';
+  const BASE_SIZE = CANVAS_SIZE * 0.22;   // emoji 初始大小
+  const MIN_SCALE = 0.8;                  // 縮放下限(相對初始大小)
+  const MAX_SCALE = 3;                    // 縮放上限
+  const HANDLE_R = 22;                    // 手把繪製半徑
+  const HANDLE_HIT = 36;                  // 手把觸控判定半徑(比繪製大,方便手指按)
+  const KEY_CUSTOM = 'moujaro.customBgs';
+  const KEY_FAVS = 'moujaro.favorites';
 
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
@@ -523,36 +634,164 @@
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
   }
 
-  // ---- 建立底圖選擇 grid ----
-  for (let i = 1; i <= BG_COUNT; i++) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.dataset.index = i;
-
-    const img = new Image();
-    img.src = 'image/bg' + i + '.jpg';
-    img.alt = '底圖 ' + i;
-
-    img.onload = () => {
-      btn.appendChild(img);
-      // 預設選取第一張載入成功的圖
-      if (!currentImage) selectBackground(btn, img);
-    };
-    img.onerror = () => {
-      btn.classList.add('unavailable');
-      btn.disabled = true;
-    };
-
-    btn.addEventListener('click', () => selectBackground(btn, img));
-    bgGrid.appendChild(btn);
+  // ---- localStorage 存取(容錯:隱私模式或空間不足時不中斷)----
+  function loadJSON(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key)) || fallback; }
+    catch (e) { return fallback; }
+  }
+  function saveJSON(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+    catch (e) { showToast('本機儲存空間不足，請先刪除部分項目', 'err'); return false; }
   }
 
-  function selectBackground(btn, img) {
-    bgGrid.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    currentImage = img;
+  // ---- 底圖:內建 / 自訂雙模式 ----
+  const tabBuiltin = document.getElementById('tabBuiltin');
+  const tabCustom = document.getElementById('tabCustom');
+  const bgFileInput = document.getElementById('bgFileInput');
+
+  let bgMode = 'builtin';
+  let currentBg = null;    // { type:'builtin', index } 或 { type:'custom', slot };收藏載入的自訂圖為 null
+  let pendingSlot = null;  // 等待選擇檔案的自訂格
+
+  let customBgs = loadJSON(KEY_CUSTOM, null);
+  if (!Array.isArray(customBgs) || customBgs.length !== BG_COUNT) customBgs = Array(BG_COUNT).fill(null);
+
+  const builtinBgs = [];
+  for (let i = 1; i <= BG_COUNT; i++) {
+    const item = { img: new Image(), status: 'loading' };
+    item.img.src = 'image/bg' + i + '.jpg';
+    item.img.onload = () => {
+      item.status = 'ok';
+      // 預設選取第一張載入成功的圖
+      if (!currentImage) setBackground({ type: 'builtin', index: i });
+      else if (bgMode === 'builtin') renderBgGrid();
+    };
+    item.img.onerror = () => {
+      item.status = 'error';
+      if (bgMode === 'builtin') renderBgGrid();
+    };
+    builtinBgs.push(item);
+  }
+
+  function setBgMode(mode) {
+    bgMode = mode;
+    tabBuiltin.classList.toggle('active', mode === 'builtin');
+    tabCustom.classList.toggle('active', mode === 'custom');
+    renderBgGrid();
+  }
+  tabBuiltin.addEventListener('click', () => setBgMode('builtin'));
+  tabCustom.addEventListener('click', () => setBgMode('custom'));
+
+  function renderBgGrid() {
+    bgGrid.innerHTML = '';
+    if (bgMode === 'builtin') {
+      builtinBgs.forEach((item, idx) => {
+        const i = idx + 1;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        if (item.status === 'ok') {
+          const im = document.createElement('img');
+          im.src = item.img.src;
+          im.alt = '底圖 ' + i;
+          btn.appendChild(im);
+          if (currentBg && currentBg.type === 'builtin' && currentBg.index === i) btn.classList.add('selected');
+          btn.addEventListener('click', () => setBackground({ type: 'builtin', index: i }));
+        } else {
+          btn.classList.add('unavailable');
+          btn.disabled = true;
+        }
+        bgGrid.appendChild(btn);
+      });
+    } else {
+      customBgs.forEach((data, slot) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        if (data) {
+          const im = document.createElement('img');
+          im.src = data;
+          im.alt = '自訂底圖 ' + (slot + 1);
+          btn.appendChild(im);
+          if (currentBg && currentBg.type === 'custom' && currentBg.slot === slot) btn.classList.add('selected');
+          btn.addEventListener('click', () => setBackground({ type: 'custom', slot }));
+
+          const del = document.createElement('span');
+          del.className = 'thumb-del';
+          del.textContent = '×';
+          del.title = '刪除這張圖片';
+          del.addEventListener('click', ev => {
+            ev.stopPropagation();
+            deleteCustomBg(slot);
+          });
+          btn.appendChild(del);
+        } else {
+          btn.classList.add('add-slot');
+          btn.title = '載入本機圖片';
+          btn.addEventListener('click', () => {
+            pendingSlot = slot;
+            bgFileInput.value = '';
+            bgFileInput.click();
+          });
+        }
+        bgGrid.appendChild(btn);
+      });
+    }
+  }
+
+  function setBackground(bg) {
+    currentBg = bg;
+    if (bg.type === 'builtin') {
+      currentImage = builtinBgs[bg.index - 1].img;
+    } else {
+      const img = new Image();
+      img.onload = () => { currentImage = img; render(); };
+      img.src = customBgs[bg.slot];
+    }
+    renderBgGrid();
     render();
   }
+
+  function deleteCustomBg(slot) {
+    customBgs[slot] = null;
+    saveJSON(KEY_CUSTOM, customBgs);
+    if (currentBg && currentBg.type === 'custom' && currentBg.slot === slot) {
+      currentBg = null;
+      currentImage = null;
+    }
+    renderBgGrid();
+    render();
+  }
+
+  bgFileInput.addEventListener('change', () => {
+    const file = bgFileInput.files[0];
+    if (!file || pendingSlot === null) return;
+    const slot = pendingSlot;
+    pendingSlot = null;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        // 縮到 640px 內再存成 JPEG,避免佔滿 localStorage(約 5MB 上限)
+        const scale = Math.min(1, CANVAS_SIZE / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width * scale));
+        c.height = Math.max(1, Math.round(img.height * scale));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        customBgs[slot] = c.toDataURL('image/jpeg', 0.85);
+        if (saveJSON(KEY_CUSTOM, customBgs)) {
+          setBackground({ type: 'custom', slot });
+          showToast('已載入圖片');
+        } else {
+          customBgs[slot] = null;
+        }
+      };
+      img.onerror = () => showToast('無法讀取這張圖片', 'err');
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  renderBgGrid();
 
   // ---- Emoji 裝飾(Twemoji SVG,本地載入不污染 canvas)----
   const EMOJIS = [
@@ -600,7 +839,7 @@
       img: e.img,
       x: CANVAS_SIZE / 2 + offset,
       y: CANVAS_SIZE / 2 + offset,
-      size: CANVAS_SIZE * 0.22,
+      size: BASE_SIZE,
       rotation: 0,
       pop: 0
     };
@@ -628,6 +867,10 @@
     stickers.splice(stickers.indexOf(s), 1);
     if (selected === s) selected = null;
     render();
+  }
+
+  function clampSize(v) {
+    return Math.min(Math.max(v, BASE_SIZE * MIN_SCALE), BASE_SIZE * MAX_SCALE);
   }
 
   // ---- 繪製 canvas ----
@@ -692,7 +935,40 @@
       const half = selected.size / 2 + 6;
       ctx.strokeRect(-half, -half, half * 2, half * 2);
       ctx.restore();
+
+      // 旋轉/縮放手把:手機單指即可精細操作
+      const hp = handlePositions(selected);
+      drawHandle(hp.rotate, '↻', 0);
+      drawHandle(hp.scale, '↔︎', -Math.PI / 4); // ↔ 轉 45° 變斜向雙箭頭
     }
+  }
+
+  // 手把位置:右上角=旋轉,左下角=縮放(跟著選取框旋轉)
+  function handlePositions(s) {
+    const half = s.size / 2 + 6;
+    const cos = Math.cos(s.rotation), sin = Math.sin(s.rotation);
+    const corner = (lx, ly) => ({ x: s.x + lx * cos - ly * sin, y: s.y + lx * sin + ly * cos });
+    return { rotate: corner(half, -half), scale: corner(-half, half) };
+  }
+
+  function drawHandle(p, glyph, tilt) {
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.translate(p.x, p.y);
+    ctx.beginPath();
+    ctx.arc(0, 0, HANDLE_R, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = 'rgba(31,78,121,.95)';
+    ctx.lineWidth = 2.5;
+    ctx.fill();
+    ctx.stroke();
+    ctx.rotate(tilt);
+    ctx.fillStyle = '#1f4e79';
+    ctx.font = '700 ' + Math.round(HANDLE_R * 1.2) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(glyph, 0, 2);
+    ctx.restore();
   }
 
   textInput.addEventListener('input', () => render());
@@ -701,11 +977,11 @@
     document.fonts.ready.then(() => render());
   }
 
-  // ---- canvas 上的拖曳 / 手勢操作 ----
+  // ---- canvas 上的拖曳 / 手把操作 ----
   const pointers = new Map();
   let dragTarget = null;
   let dragOffset = null;
-  let pinchStart = null;
+  let handleDrag = null;   // { type:'rotate'|'scale', ... }
   let lastTap = { time: 0, target: null };
 
   function canvasPos(ev) {
@@ -729,41 +1005,57 @@
     return null;
   }
 
+  // 判斷是否按在旋轉/縮放手把上
+  function hitHandle(p) {
+    if (!selected) return null;
+    const hp = handlePositions(selected);
+    if (Math.hypot(p.x - hp.rotate.x, p.y - hp.rotate.y) <= HANDLE_HIT) return 'rotate';
+    if (Math.hypot(p.x - hp.scale.x, p.y - hp.scale.y) <= HANDLE_HIT) return 'scale';
+    return null;
+  }
+
   canvas.addEventListener('pointerdown', ev => {
     ev.preventDefault();
     canvas.setPointerCapture(ev.pointerId);
     const p = canvasPos(ev);
     pointers.set(ev.pointerId, p);
+    if (pointers.size !== 1) return; // 只用第一指操作
 
-    if (pointers.size === 1) {
-      const s = hitTest(p);
-
-      // 雙擊 / 雙點同一個 emoji → 移除
-      const now = performance.now();
-      if (s && s === lastTap.target && now - lastTap.time < 350) {
-        lastTap = { time: 0, target: null };
-        removeSticker(s);
-        return;
-      }
-      lastTap = { time: now, target: s };
-
-      selected = s;
-      if (s) {
-        dragTarget = s;
-        dragOffset = { x: p.x - s.x, y: p.y - s.y };
-      }
-      render();
-    } else if (pointers.size === 2 && selected) {
-      // 第二指按下 → 開始縮放/旋轉
-      const [a, b] = [...pointers.values()];
-      pinchStart = {
-        dist: Math.hypot(b.x - a.x, b.y - a.y),
-        angle: Math.atan2(b.y - a.y, b.x - a.x),
-        size: selected.size,
-        rotation: selected.rotation
+    // 手把優先於一般點選,避免手指蓋住 emoji 時誤判
+    const h = hitHandle(p);
+    if (h === 'rotate') {
+      handleDrag = {
+        type: 'rotate',
+        grabAngle: Math.atan2(p.y - selected.y, p.x - selected.x) - selected.rotation
       };
-      dragTarget = null;
+      return;
     }
+    if (h === 'scale') {
+      handleDrag = {
+        type: 'scale',
+        startDist: Math.max(Math.hypot(p.x - selected.x, p.y - selected.y), 1),
+        startSize: selected.size
+      };
+      return;
+    }
+
+    const s = hitTest(p);
+
+    // 雙擊 / 雙點同一個 emoji → 移除
+    const now = performance.now();
+    if (s && s === lastTap.target && now - lastTap.time < 350) {
+      lastTap = { time: 0, target: null };
+      removeSticker(s);
+      return;
+    }
+    lastTap = { time: now, target: s };
+
+    selected = s;
+    if (s) {
+      dragTarget = s;
+      dragOffset = { x: p.x - s.x, y: p.y - s.y };
+    }
+    render();
   });
 
   canvas.addEventListener('pointermove', ev => {
@@ -771,14 +1063,15 @@
     const p = canvasPos(ev);
     pointers.set(ev.pointerId, p);
 
-    if (pointers.size === 2 && pinchStart && selected) {
-      const [a, b] = [...pointers.values()];
-      const dist = Math.hypot(b.x - a.x, b.y - a.y);
-      const angle = Math.atan2(b.y - a.y, b.x - a.x);
-      selected.size = Math.min(Math.max(pinchStart.size * dist / pinchStart.dist, 40), CANVAS_SIZE);
-      selected.rotation = pinchStart.rotation + (angle - pinchStart.angle);
+    if (handleDrag && selected) {
+      if (handleDrag.type === 'rotate') {
+        selected.rotation = Math.atan2(p.y - selected.y, p.x - selected.x) - handleDrag.grabAngle;
+      } else {
+        const dist = Math.hypot(p.x - selected.x, p.y - selected.y);
+        selected.size = clampSize(handleDrag.startSize * dist / handleDrag.startDist);
+      }
       render();
-    } else if (dragTarget && pointers.size === 1) {
+    } else if (dragTarget) {
       dragTarget.x = p.x - dragOffset.x;
       dragTarget.y = p.y - dragOffset.y;
       render();
@@ -787,8 +1080,10 @@
 
   function endPointer(ev) {
     pointers.delete(ev.pointerId);
-    if (pointers.size < 2) pinchStart = null;
-    if (pointers.size === 0) dragTarget = null;
+    if (pointers.size === 0) {
+      dragTarget = null;
+      handleDrag = null;
+    }
   }
   canvas.addEventListener('pointerup', endPointer);
   canvas.addEventListener('pointercancel', endPointer);
@@ -801,7 +1096,7 @@
       selected.rotation += (ev.deltaY > 0 ? 1 : -1) * Math.PI / 24;
     } else {
       const factor = ev.deltaY > 0 ? 0.92 : 1.08;
-      selected.size = Math.min(Math.max(selected.size * factor, 40), CANVAS_SIZE);
+      selected.size = clampSize(selected.size * factor);
     }
     render();
   }, { passive: false });
@@ -867,6 +1162,117 @@
     a.click();
     render(false);
   }
+
+  // ---- 我的最愛:整組配置存 localStorage,一鍵載回 ----
+  const MAX_FAVS = 8;
+  const favGrid = document.getElementById('favGrid');
+  const favHint = document.getElementById('favHint');
+  const saveFavBtn = document.getElementById('saveFavBtn');
+
+  let favorites = loadJSON(KEY_FAVS, null);
+  if (!Array.isArray(favorites)) favorites = [];
+
+  // 以目前畫布產生 128px 縮圖
+  function makeThumb() {
+    render(true);
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    c.getContext('2d').drawImage(canvas, 0, 0, 128, 128);
+    render(false);
+    return c.toDataURL('image/jpeg', 0.8);
+  }
+
+  saveFavBtn.addEventListener('click', () => {
+    if (favorites.length >= MAX_FAVS) {
+      showToast('最多收藏 ' + MAX_FAVS + ' 組，請先刪除舊的', 'err');
+      return;
+    }
+
+    // 內建底圖記編號即可;自訂圖直接內嵌圖檔,之後刪除自訂格也不影響收藏
+    let bg = null;
+    if (currentBg && currentBg.type === 'builtin') {
+      bg = { type: 'builtin', index: currentBg.index };
+    } else if (currentImage && currentImage.src.startsWith('data:')) {
+      bg = { type: 'data', data: currentImage.src };
+    }
+
+    const fav = {
+      bg,
+      text: textInput.value,
+      stickers: stickers.map(s => ({
+        code: (EMOJIS.find(e => e.img === s.img) || {}).code,
+        x: s.x, y: s.y, size: s.size, rotation: s.rotation
+      })).filter(s => s.code),
+      thumb: makeThumb()
+    };
+
+    favorites.push(fav);
+    if (saveJSON(KEY_FAVS, favorites)) {
+      renderFavGrid();
+      showToast('已儲存到我的最愛');
+    } else {
+      favorites.pop();
+    }
+  });
+
+  function loadFavorite(fav) {
+    textInput.value = fav.text || '';
+    stickers.length = 0;
+    selected = null;
+    (fav.stickers || []).forEach(st => {
+      const e = EMOJIS.find(x => x.code === st.code);
+      if (!e) return;
+      stickers.push({ img: e.img, x: st.x, y: st.y, size: clampSize(st.size), rotation: st.rotation || 0, pop: 1 });
+    });
+
+    if (fav.bg && fav.bg.type === 'builtin') {
+      const item = builtinBgs[fav.bg.index - 1];
+      if (item && item.status === 'ok') {
+        if (bgMode !== 'builtin') setBgMode('builtin');
+        setBackground({ type: 'builtin', index: fav.bg.index });
+      }
+    } else if (fav.bg && fav.bg.type === 'data') {
+      const img = new Image();
+      img.onload = () => { currentImage = img; render(); };
+      img.src = fav.bg.data;
+      currentBg = null;
+      renderBgGrid();
+    }
+
+    render();
+    showToast('已載入收藏配置');
+  }
+
+  function renderFavGrid() {
+    favGrid.innerHTML = '';
+    favorites.forEach((fav, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.title = '載入這組配置';
+      const im = document.createElement('img');
+      im.src = fav.thumb;
+      im.alt = '收藏 ' + (i + 1);
+      btn.appendChild(im);
+      btn.addEventListener('click', () => loadFavorite(fav));
+
+      const del = document.createElement('span');
+      del.className = 'thumb-del';
+      del.textContent = '×';
+      del.title = '刪除這組收藏';
+      del.addEventListener('click', ev => {
+        ev.stopPropagation();
+        favorites.splice(i, 1);
+        saveJSON(KEY_FAVS, favorites);
+        renderFavGrid();
+      });
+      btn.appendChild(del);
+
+      favGrid.appendChild(btn);
+    });
+    favGrid.style.display = favorites.length ? '' : 'none';
+    favHint.style.display = favorites.length ? 'none' : '';
+  }
+  renderFavGrid();
 
   render();
 })();
